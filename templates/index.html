@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Чат-бот</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary-color: #4361ee;
+            --secondary-color: #3f37c9;
+            --user-message: #4895ef;
+            --bot-message: #4cc9f0;
+            --background: #f8f9fa;
+            --text-color: #333;
+            --light-gray: #e9ecef;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Roboto', sans-serif;
+        }
+
+        body {
+            background-color: var(--background);
+            color: var(--text-color);
+            line-height: 1.6;
+            padding: 20px;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .chat-container {
+            width: 100%;
+            max-width: 800px;
+            height: 80vh;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .chat-header {
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            color: white;
+            padding: 20px;
+            text-align: center;
+            font-size: 1.5rem;
+            font-weight: 500;
+        }
+
+        #chat-box {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            background-color: var(--light-gray);
+        }
+
+        .message {
+            max-width: 70%;
+            padding: 12px 15px;
+            border-radius: 18px;
+            line-height: 1.4;
+            word-wrap: break-word;
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .user-message {
+            align-self: flex-end;
+            background-color: var(--user-message);
+            color: white;
+            border-bottom-right-radius: 5px;
+        }
+
+        .bot-message {
+            align-self: flex-start;
+            background-color: white;
+            color: var(--text-color);
+            border: 1px solid #ddd;
+            border-bottom-left-radius: 5px;
+        }
+
+        .chat-form {
+            display: flex;
+            padding: 15px;
+            background: white;
+            border-top: 1px solid #eee;
+        }
+
+        .chat-form input {
+            flex: 1;
+            padding: 12px 15px;
+            border: 1px solid #ddd;
+            border-radius: 25px;
+            outline: none;
+            font-size: 1rem;
+            transition: border 0.3s;
+        }
+
+        .chat-form input:focus {
+            border-color: var(--primary-color);
+        }
+
+        .chat-form button {
+            margin-left: 10px;
+            padding: 12px 20px;
+            background: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: background 0.3s;
+        }
+
+        .chat-form button:hover {
+            background: var(--secondary-color);
+        }
+
+        #chat-box::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        #chat-box::-webkit-scrollbar-track {
+            background: #f1f1f1;
+        }
+
+        #chat-box::-webkit-scrollbar-thumb {
+            background: #ccc;
+            border-radius: 3px;
+        }
+
+        #chat-box::-webkit-scrollbar-thumb:hover {
+            background: #aaa;
+        }
+
+        @media (max-width: 600px) {
+            .chat-container {
+                height: 90vh;
+                border-radius: 0;
+            }
+            
+            .message {
+                max-width: 85%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="chat-container">
+        <div class="chat-header">
+            <h1>AI Чат-бот</h1>
+        </div>
+        <div id="chat-box"></div>
+        <form id="chat-form" class="chat-form">
+            <input type="text" name="message" placeholder="Напишіть повідомлення..." required autocomplete="off">
+            <button type="submit">Надіслати</button>
+        </form>
+    </div>
+
+    <script>
+        document.getElementById("chat-form").addEventListener("submit", async (e) => {
+            e.preventDefault();
+            const messageInput = e.target.message;
+            const message = messageInput.value.trim();
+            const chatBox = document.getElementById("chat-box");
+            
+            if (!message) return;
+            
+            chatBox.innerHTML += `<div class="message user-message">${message}</div>`;
+            
+            messageInput.value = "";
+            
+            chatBox.scrollTop = chatBox.scrollHeight;
+            
+            try {
+                const loadingIndicator = document.createElement('div');
+                loadingIndicator.className = 'message bot-message';
+                loadingIndicator.textContent = 'Бот думає...';
+                chatBox.appendChild(loadingIndicator);
+                chatBox.scrollTop = chatBox.scrollHeight;
+                
+                const response = await fetch("/chat", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/x-www-form-urlencoded",
+                    },
+                    body: `message=${encodeURIComponent(message)}`
+                });
+                
+                chatBox.removeChild(loadingIndicator);
+                
+                if (!response.ok) throw new Error('Помилка відповіді сервера');
+                
+                const data = await response.json();
+                chatBox.innerHTML += `<div class="message bot-message">${data.response}</div>`;
+            } catch (error) {
+                chatBox.innerHTML += `<div class="message bot-message" style="color: #e63946;">Помилка: ${error.message}</div>`;
+            }
+            
+            chatBox.scrollTop = chatBox.scrollHeight;
+        });
+
+        window.addEventListener('DOMContentLoaded', () => {
+            document.querySelector('input[name="message"]').focus();
+        });
+    </script>
+</body>
+</html>
